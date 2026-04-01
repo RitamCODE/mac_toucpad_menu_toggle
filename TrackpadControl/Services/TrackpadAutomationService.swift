@@ -43,6 +43,7 @@ final class TrackpadAutomationService: @unchecked Sendable {
         "com.apple.driver.AppleBluetoothMultitouch.trackpad"
     ]
     private let key = "USBMouseStopsTrackpad"
+    private let checkboxLabel = "Ignore built-in trackpad when mouse or wireless trackpad is present"
 
     init(runner: ProcessRunner = ProcessRunner()) {
         self.runner = runner
@@ -114,11 +115,16 @@ final class TrackpadAutomationService: @unchecked Sendable {
         let reloadedStatus = try readStatusSynchronously()
         let resolvedState = reloadedStatus.state == .unknown ? expectedState : reloadedStatus.state
         let detailPrefix: String
+        let launchedBackgroundSync = launchUIScriptingSyncInBackground(enabled: enabled)
 
         if reloadedStatus.state == .unknown {
-            detailPrefix = "Preference updated. Exact readback is best effort on this macOS version."
+            detailPrefix = launchedBackgroundSync
+                ? "Preference updated. Live setting sync is running in the background."
+                : "Preference updated. Exact readback is best effort on this macOS version."
         } else if reloadedStatus.state == expectedState {
-            detailPrefix = "Preference updated."
+            detailPrefix = launchedBackgroundSync
+                ? "Preference updated. Live setting sync is running in the background."
+                : "Preference updated."
         } else {
             detailPrefix = "Preference write completed, but macOS reported a different value after refresh."
         }
@@ -150,6 +156,94 @@ final class TrackpadAutomationService: @unchecked Sendable {
 
         return try runner.run(executablePath: "/usr/bin/osascript", arguments: ["-e", script])
     }
+
+    @discardableResult
+    private func launchUIScriptingSyncInBackground(enabled: Bool) -> Bool {
+        guard AccessibilityPermissionHelper.hasAccessibilityPermission(prompt: false) else {
+            return false
+        }
+
+        let desiredValue = enabled ? "1" : "0"
+        let script = """
+        set checkboxTitle to "\(checkboxLabel)"
+        set desiredValue to \(desiredValue)
+
+        try
+            tell application "System Settings"
+                activate
+                reveal anchor "AX_ALT_MOUSE_BUTTONS" of pane id "com.apple.Accessibility-Settings.extension"
+            end tell
+
+            delay 0.5
+
+            tell application "System Events"
+                tell process "System Settings"
+                    set frontmost to true
+
+                    repeat 25 times
+                        if exists window 1 then exit repeat
+                        delay 0.1
+                    end repeat
+
+                    set targetWindow to missing value
+
+                    try
+                        if exists window "Pointer Control" then
+                            set targetWindow to window "Pointer Control"
+                        end if
+                    end try
+
+                    if targetWindow is missing value then
+                        try
+                            set targetWindow to window 1
+                        end try
+                    end if
+
+                    if targetWindow is missing value then
+                        error "Could not find a System Settings window."
+                    end if
+
+                    set targetCheckbox to missing value
+                    set allElements to entire contents of targetWindow
+
+                    repeat with elementRef in allElements
+                        try
+                            if role of elementRef is "AXCheckBox" and name of elementRef is checkboxTitle then
+                                set targetCheckbox to elementRef
+                                exit repeat
+                            end if
+                        end try
+                    end repeat
+
+                    if targetCheckbox is missing value then
+                        error "Could not find the checkbox named '" & checkboxTitle & "'."
+                    end if
+
+                    if value of targetCheckbox is not desiredValue then
+                        tell targetCheckbox to perform action "AXPress"
+                        delay 0.2
+                    end if
+                end tell
+            end tell
+
+            tell application "System Settings" to quit
+        end try
+        """
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+        process.arguments = ["-e", script]
+        process.standardOutput = Pipe()
+        process.standardError = Pipe()
+
+        do {
+            try process.run()
+            return true
+        } catch {
+            return false
+        }
+    }
+
     private func parseBoolean(from rawValue: String) -> Bool? {
         switch rawValue.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
         case "1", "true", "yes":
