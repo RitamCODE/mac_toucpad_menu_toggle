@@ -25,18 +25,12 @@ struct TrackpadAutomationResult {
 enum TrackpadAutomationError: LocalizedError {
     case readFailed(String)
     case writeFailed(String)
-    case accessibilityPermissionRequired
-    case uiScriptingFailed(String)
 
     var errorDescription: String? {
         switch self {
         case .readFailed(let message):
             return message
         case .writeFailed(let message):
-            return message
-        case .accessibilityPermissionRequired:
-            return "System Settings UI scripting needs Accessibility access. Grant permission to the app and try again."
-        case .uiScriptingFailed(let message):
             return message
         }
     }
@@ -49,7 +43,6 @@ final class TrackpadAutomationService: @unchecked Sendable {
         "com.apple.driver.AppleBluetoothMultitouch.trackpad"
     ]
     private let key = "USBMouseStopsTrackpad"
-    private let checkboxLabel = "Ignore built-in trackpad when mouse or wireless trackpad is present"
 
     init(runner: ProcessRunner = ProcessRunner()) {
         self.runner = runner
@@ -117,37 +110,23 @@ final class TrackpadAutomationService: @unchecked Sendable {
             )
         }
 
-        let initialStatus = try readStatusSynchronously()
         let expectedState: TrackpadSettingState = enabled ? .enabled : .disabled
-
-        if !AccessibilityPermissionHelper.hasAccessibilityPermission(prompt: false) {
-            if !AccessibilityPermissionHelper.hasAccessibilityPermission(prompt: true) {
-                AccessibilityPermissionHelper.openAccessibilitySettings()
-
-                return TrackpadAutomationResult(
-                    state: initialStatus.state,
-                    detailMessage: [
-                        initialStatus.detailMessage,
-                        "Preference updated, but Accessibility permission is still needed to click the real System Settings checkbox on this Mac."
-                    ]
-                    .compactMap { $0 }
-                    .joined(separator: " ")
-                )
-            }
-        }
-
-        let fallbackResult = try runUIScriptingFallback(enabled: enabled)
-        guard fallbackResult.terminationStatus == 0 else {
-            throw TrackpadAutomationError.uiScriptingFailed(
-                "The preference was written, but System Settings UI scripting did not complete. \(nonEmptyMessage(from: fallbackResult) ?? "Adjust the fallback script for this macOS version.")"
-            )
-        }
-
         let reloadedStatus = try readStatusSynchronously()
+        let resolvedState = reloadedStatus.state == .unknown ? expectedState : reloadedStatus.state
+        let detailPrefix: String
+
+        if reloadedStatus.state == .unknown {
+            detailPrefix = "Preference updated. Exact readback is best effort on this macOS version."
+        } else if reloadedStatus.state == expectedState {
+            detailPrefix = "Preference updated."
+        } else {
+            detailPrefix = "Preference write completed, but macOS reported a different value after refresh."
+        }
+
         return TrackpadAutomationResult(
-            state: reloadedStatus.state == .unknown ? expectedState : reloadedStatus.state,
+            state: resolvedState,
             detailMessage: [
-                "Preference updated and System Settings checkbox automation ran.",
+                detailPrefix,
                 reloadedStatus.detailMessage
             ]
             .compactMap { $0 }
@@ -171,68 +150,6 @@ final class TrackpadAutomationService: @unchecked Sendable {
 
         return try runner.run(executablePath: "/usr/bin/osascript", arguments: ["-e", script])
     }
-
-    private func runUIScriptingFallback(enabled: Bool) throws -> ProcessOutput {
-        let desiredValue = enabled ? "1" : "0"
-        let script = """
-        set checkboxTitle to "\(checkboxLabel)"
-        set desiredValue to \(desiredValue)
-
-        tell application "System Settings"
-            activate
-            reveal anchor "AX_ALT_MOUSE_BUTTONS" of pane id "com.apple.Accessibility-Settings.extension"
-        end tell
-
-        delay 1.0
-
-        tell application "System Events"
-            tell process "System Settings"
-                set frontmost to true
-                set targetCheckbox to missing value
-                repeat until exists window "Pointer Control"
-                    delay 0.2
-                end repeat
-
-                delay 0.6
-
-                try
-                    set targetCheckbox to checkbox checkboxTitle of group 1 of scroll area 1 of group 1 of group 3 of splitter group 1 of group 1 of window "Pointer Control"
-                end try
-
-                if targetCheckbox is missing value then
-                    try
-                        set targetCheckbox to checkbox checkboxTitle of group 1 of scroll area 1 of group 1 of group 2 of splitter group 1 of group 1 of window "Pointer Control"
-                    end try
-                end if
-
-                if targetCheckbox is missing value then
-                    set allElements to entire contents of window "Pointer Control"
-
-                    repeat with elementRef in allElements
-                        try
-                            if role of elementRef is "AXCheckBox" and name of elementRef is checkboxTitle then
-                                set targetCheckbox to elementRef
-                                exit repeat
-                            end if
-                        end try
-                    end repeat
-                end if
-
-                if targetCheckbox is missing value then
-                    error "Could not find the checkbox named '" & checkboxTitle & "'. macOS may have changed the Settings layout or label."
-                end if
-
-                if value of targetCheckbox is not desiredValue then
-                    tell targetCheckbox to perform action "AXPress"
-                    delay 0.4
-                end if
-            end tell
-        end tell
-        """
-
-        return try runner.run(executablePath: "/usr/bin/osascript", arguments: ["-e", script])
-    }
-
     private func parseBoolean(from rawValue: String) -> Bool? {
         switch rawValue.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
         case "1", "true", "yes":
