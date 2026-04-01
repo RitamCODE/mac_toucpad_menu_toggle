@@ -49,9 +49,9 @@ git push -u origin main
 
 If you have not created the GitHub repo yet, create an empty repo on GitHub first, then run the commands above.
 
-## Build a downloadable app
+## Build downloadable files
 
-To build a signed local release zip:
+To build local release artifacts:
 
 ```bash
 ./scripts/package_release.sh
@@ -61,8 +61,16 @@ This creates:
 
 - `dist/TrackpadControl.app`
 - `dist/TrackpadControl-macOS.zip`
+- `dist/TrackpadControl-macOS.dmg`
+- `dist/TrackpadControl-macOS.pkg`
 
-You can upload `dist/TrackpadControl-macOS.zip` to GitHub Releases for downloading.
+Recommended use:
+
+- `.dmg`: easiest user-facing download for drag-and-open distribution
+- `.pkg`: installer-style distribution
+- `.zip`: simple archive for GitHub Releases
+
+You can upload any of these files to GitHub Releases for downloading.
 
 ## Public distribution
 
@@ -77,13 +85,16 @@ The current repo is ready for that flow, but the actual signing certificate, not
 
 ## Create a GitHub Release
 
-After `dist/TrackpadControl-macOS.zip` is created:
+After the release files are created:
 
 1. Open your GitHub repo.
 2. Go to `Releases`.
 3. Click `Draft a new release`.
 4. Create a tag like `v1.0.0`.
-5. Upload `dist/TrackpadControl-macOS.zip`.
+5. Upload one or more of:
+   - `dist/TrackpadControl-macOS.zip`
+   - `dist/TrackpadControl-macOS.dmg`
+   - `dist/TrackpadControl-macOS.pkg`
 6. Publish the release.
 
 People can then download the zip from the release page.
