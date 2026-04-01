@@ -2,8 +2,7 @@
 
 Trackpad Control is a small native macOS menu bar utility built with SwiftUI. It lives in the menu bar and lets you toggle the macOS setting that ignores the built-in trackpad when a mouse or wireless trackpad is present.
 
-[![Download DMG](https://img.shields.io/badge/Download-DMG-blue)](https://github.com/RitamCODE/mac_toucpad_menu_toggle/releases/latest/download/TrackpadControl-macOS.dmg)
-[![Download PKG](https://img.shields.io/badge/Download-PKG-green)](https://github.com/RitamCODE/mac_toucpad_menu_toggle/releases/latest/download/TrackpadControl-macOS.pkg)
+[![Download ZIP](https://img.shields.io/badge/Download-ZIP-blue)](https://github.com/RitamCODE/mac_toucpad_menu_toggle/releases/latest/download/TrackpadControl-macOS.zip)
 [![Latest Release](https://img.shields.io/github/v/release/RitamCODE/mac_toucpad_menu_toggle)](https://github.com/RitamCODE/mac_toucpad_menu_toggle/releases/latest)
 
 ## What it does
@@ -65,21 +64,27 @@ This creates:
 
 - `dist/TrackpadControl.app`
 - `dist/TrackpadControl-macOS.zip`
-- `dist/TrackpadControl-macOS.dmg`
-- `dist/TrackpadControl-macOS.pkg`
 
-Recommended use:
+Upload `dist/TrackpadControl-macOS.zip` to GitHub Releases. The button at the top of this README is wired to that exact filename.
 
-- `.dmg`: easiest user-facing download for drag-and-open distribution
-- `.pkg`: installer-style distribution
-- `.zip`: simple archive for GitHub Releases
+## Install from the ZIP
 
-You can upload any of these files to GitHub Releases for downloading. The buttons at the top of this README are wired to:
+Because this app is not notarized, macOS may block it on first launch.
 
-- `TrackpadControl-macOS.dmg`
-- `TrackpadControl-macOS.pkg`
+Recommended install steps:
 
-Those buttons start working once those exact filenames are attached to a GitHub Release.
+1. Download `TrackpadControl-macOS.zip` from the latest GitHub Release.
+2. Unzip it.
+3. Move `TrackpadControl.app` into `Applications`.
+4. Remove the quarantine flag in Terminal:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/TrackpadControl.app
+```
+
+5. Open `TrackpadControl.app` from `Applications`.
+
+If you keep the app somewhere else, replace `/Applications/TrackpadControl.app` with the real path.
 
 ## Public distribution
 
@@ -100,10 +105,8 @@ After the release files are created:
 2. Go to `Releases`.
 3. Click `Draft a new release`.
 4. Create a tag like `v1.0.0`.
-5. Upload one or more of:
+5. Upload:
    - `dist/TrackpadControl-macOS.zip`
-   - `dist/TrackpadControl-macOS.dmg`
-   - `dist/TrackpadControl-macOS.pkg`
 6. Publish the release.
 
 After that, users can download directly from the README buttons at the top of this page.
@@ -128,4 +131,4 @@ After that, users can download directly from the README buttons at the top of th
 - Apple does not expose a dedicated public Swift API for this setting, so the app relies on preference writes plus a UI-scripting fallback.
 - Exact status detection is best effort. If the expected keys are missing or the two domains disagree, the app reports `Unknown`.
 - The UI-scripting fallback depends on the current `System Settings` UI hierarchy for the `Pointer Control` pane. If Apple changes that layout or label, `TrackpadAutomationService.swift` may need adjustment.
-- A locally shared zip may still show a macOS warning if it is not notarized.
+- A locally shared zip will show a macOS warning until the app is signed with Developer ID and notarized.
