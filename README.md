@@ -2,6 +2,10 @@
 
 Trackpad Control is a small native macOS menu bar utility built with SwiftUI. It lives in the menu bar and lets you toggle the macOS setting that ignores the built-in trackpad when a mouse or wireless trackpad is present.
 
+[![Download DMG](https://img.shields.io/badge/Download-DMG-blue)](https://github.com/RitamCODE/mac_toucpad_menu_toggle/releases/latest/download/TrackpadControl-macOS.dmg)
+[![Download PKG](https://img.shields.io/badge/Download-PKG-green)](https://github.com/RitamCODE/mac_toucpad_menu_toggle/releases/latest/download/TrackpadControl-macOS.pkg)
+[![Latest Release](https://img.shields.io/github/v/release/RitamCODE/mac_toucpad_menu_toggle)](https://github.com/RitamCODE/mac_toucpad_menu_toggle/releases/latest)
+
 ## What it does
 
 - Runs as a menu bar app using `MenuBarExtra`
@@ -70,7 +74,12 @@ Recommended use:
 - `.pkg`: installer-style distribution
 - `.zip`: simple archive for GitHub Releases
 
-You can upload any of these files to GitHub Releases for downloading.
+You can upload any of these files to GitHub Releases for downloading. The buttons at the top of this README are wired to:
+
+- `TrackpadControl-macOS.dmg`
+- `TrackpadControl-macOS.pkg`
+
+Those buttons start working once those exact filenames are attached to a GitHub Release.
 
 ## Public distribution
 
@@ -97,7 +106,7 @@ After the release files are created:
    - `dist/TrackpadControl-macOS.pkg`
 6. Publish the release.
 
-People can then download the zip from the release page.
+After that, users can download directly from the README buttons at the top of this page.
 
 ## Notes
 
