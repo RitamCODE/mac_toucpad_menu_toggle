@@ -46,8 +46,37 @@ final class MenuBarViewModel: ObservableObject {
 
     func setTrackpadIgnoreEnabled(_ enabled: Bool) {
         refreshAccessibilityPermissionStatus()
-        runOperation {
-            try $0.setIgnoreTrackpadEnabled(enabled)
+        guard !isBusy else {
+            return
+        }
+
+        let previousState = currentState
+        currentState = enabled ? .enabled : .disabled
+        detailMessage = "Applying preference update..."
+        errorMessage = nil
+        isBusy = true
+
+        Task {
+            do {
+                let service = self.service
+                let result = try await withCheckedThrowingContinuation { continuation in
+                    DispatchQueue.global(qos: .userInitiated).async {
+                        do {
+                            continuation.resume(returning: try service.setIgnoreTrackpadEnabled(enabled))
+                        } catch {
+                            continuation.resume(throwing: error)
+                        }
+                    }
+                }
+
+                apply(result)
+            } catch {
+                currentState = previousState
+                detailMessage = nil
+                errorMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            }
+
+            isBusy = false
         }
     }
 

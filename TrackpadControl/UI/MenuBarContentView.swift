@@ -9,15 +9,30 @@ struct MenuBarContentView: View {
             Text("Trackpad Control")
                 .font(.headline)
 
-            Toggle(
-                "Ignore built-in trackpad when mouse is present",
-                isOn: Binding(
-                    get: { viewModel.toggleValue },
-                    set: { viewModel.setTrackpadIgnoreEnabled($0) }
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Ignore built-in trackpad when mouse is present")
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    if viewModel.isBusy {
+                        Text("Applying...")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                Spacer(minLength: 12)
+
+                Toggle(
+                    "",
+                    isOn: Binding(
+                        get: { viewModel.toggleValue },
+                        set: { viewModel.setTrackpadIgnoreEnabled($0) }
+                    )
                 )
-            )
-            .toggleStyle(.switch)
-            .disabled(viewModel.isBusy)
+                .labelsHidden()
+                .toggleStyle(.switch)
+            }
 
             HStack {
                 Text("Status")
@@ -75,7 +90,7 @@ struct MenuBarContentView: View {
             }
         }
         .padding(14)
-        .frame(width: 320)
+        .frame(width: 340)
         .task {
             viewModel.refreshIfNeeded()
         }
