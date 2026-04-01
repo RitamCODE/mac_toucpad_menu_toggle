@@ -2,56 +2,69 @@
 
 Trackpad Control is a small native macOS menu bar utility built with SwiftUI. It lives in the menu bar and lets you toggle the macOS setting that ignores the built-in trackpad when a mouse or wireless trackpad is present.
 
+## What it does
+
+- Runs as a menu bar app using `MenuBarExtra`
+- Shows the current setting state
+- Toggles the setting through preference writes plus a System Settings UI-scripting fallback when needed
+- Requests Accessibility access when macOS requires it for UI automation
+
 ## Project layout
 
 - `TrackpadControl.xcodeproj`: Xcode project
-- `TrackpadControl/`: Swift sources, assets, and app metadata
+- `TrackpadControl/`: app source code
+- `scripts/package_release.sh`: release packaging script
 
-## How to run
+## Run locally
 
 1. Open `TrackpadControl.xcodeproj` in Xcode 15 or newer.
 2. Select the `TrackpadControl` scheme.
-3. Build and run the app on macOS 13 or newer.
-4. The app appears in the menu bar with the title `Trackpad Control`.
+3. In `Signing & Capabilities`, choose your Apple Developer team or Personal Team.
+4. Keep the bundle identifier unique, for example `com.ritam.TrackpadControl`.
+5. Build and run on macOS 13 or newer.
+6. The app appears in the menu bar as `Trackpad Control`.
+
+## Accessibility permission
+
+The app may need Accessibility permission to automate the real System Settings checkbox.
+
+If macOS prompts you, allow it.
+
+If you need to enable it manually:
+
+1. Open `System Settings`
+2. Go to `Privacy & Security > Accessibility`
+3. Enable `TrackpadControl`
+
+If you later change the bundle identifier or signing identity, macOS may require permission again.
 
 ## GitHub upload
 
-If this repo is not connected to GitHub yet:
+If you already have a GitHub repo created:
 
 ```bash
-cd /Users/ritam/Projects/mac_toucpad_menu_toggle
-git init
-git add .
-git commit -m "Initial Trackpad Control app"
-git branch -M main
 git remote add origin https://github.com/<your-user>/<your-repo>.git
 git push -u origin main
 ```
 
-If the repo already exists on GitHub, only the last three commands are needed after the first commit.
+If you have not created the GitHub repo yet, create an empty repo on GitHub first, then run the commands above.
 
-## Making the app downloadable
+## Build a downloadable app
 
-### Minimal downloadable build
-
-This is enough to share a `.zip` with people you trust, but macOS may warn because the app is not notarized.
-
-1. In Xcode, open the `TrackpadControl` target.
-2. In `Signing & Capabilities`, choose your Apple Developer team or Personal Team.
-3. Keep the bundle identifier unique, for example `com.ritam.TrackpadControl`.
-4. Build the Release app:
+To build a signed local release zip:
 
 ```bash
-cd /Users/ritam/Projects/mac_toucpad_menu_toggle
 ./scripts/package_release.sh
 ```
 
-That script creates:
+This creates:
 
 - `dist/TrackpadControl.app`
 - `dist/TrackpadControl-macOS.zip`
 
-### Public downloadable build
+You can upload `dist/TrackpadControl-macOS.zip` to GitHub Releases for downloading.
+
+## Public distribution
 
 If you want other people to download it without Gatekeeper warnings, you should:
 
@@ -62,7 +75,7 @@ If you want other people to download it without Gatekeeper warnings, you should:
 
 The current repo is ready for that flow, but the actual signing certificate, notarization profile, and Apple account setup must be done in Xcode / Apple Developer settings on your machine.
 
-## Creating a GitHub Release
+## Create a GitHub Release
 
 After `dist/TrackpadControl-macOS.zip` is created:
 
@@ -83,16 +96,16 @@ People can then download the zip from the release page.
   - `com.apple.driver.AppleBluetoothMultitouch.trackpad`
 - After writing, the app refreshes its state by reading the same preference keys back.
 
-## Accessibility and automation
+## Automation notes
 
 - Normal preference reads and writes do not require Accessibility permission.
 - A best-effort UI-scripting fallback is included for cases where the preference keys do not reflect the live setting correctly.
 - If that fallback is needed, macOS may prompt you to grant Accessibility access to the app.
 - UI scripting is sensitive to macOS version changes, localization, and System Settings layout changes.
-- If you change the app bundle identifier or signing identity, macOS Accessibility permission may need to be granted again.
 
 ## Known limitations
 
 - Apple does not expose a dedicated public Swift API for this setting, so the app relies on preference writes plus a UI-scripting fallback.
 - Exact status detection is best effort. If the expected keys are missing or the two domains disagree, the app reports `Unknown`.
 - The UI-scripting fallback depends on the current `System Settings` UI hierarchy for the `Pointer Control` pane. If Apple changes that layout or label, `TrackpadAutomationService.swift` may need adjustment.
+- A locally shared zip may still show a macOS warning if it is not notarized.
